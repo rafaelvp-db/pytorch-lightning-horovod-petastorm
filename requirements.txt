@@ -1,3 +1,8 @@
+torch
 pytorch_lightning
 torchvision
 torchmetrics
+pyspark==3.2.1
+numpy
+petastorm
+pytest

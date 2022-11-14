@@ -32,29 +32,38 @@ class CarsDataModule(pl.LightningDataModule):
               transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])
         ])
 
-    def setup(self, stage: str):
-        
-        # build dataset
-        dataset = StanfordCars(root=self.data_dir, download=True, split="train")
-        # split dataset
-        self.train, self.val = random_split(dataset, [6500, 1644])
+    def prepare_data(self):
+        pass
 
-        self.test = StanfordCars(root=self.data_dir, download=True, split="test")
+    def setup(self, stage: str = "fit"):
         
-        self.test = random_split(self.test, [len(self.test)])[0]
+        if stage == "fit":
+            # build dataset
+            dataset = StanfordCars(
+                root=self.data_dir,
+                split="train",
+                download=True,
+                transform=self.augmentation
+            )
+            # split dataset
+            self.train, self.val = random_split(dataset, [6500, 1644])
 
-        self.train.dataset.transform = self.augmentation
-        self.val.dataset.transform = self.transform
-        self.test.dataset.transform = self.transform
+        if stage == "test":
+            self.test = StanfordCars(
+                root=self.data_dir,
+                split="test",
+                download=True,
+                transform=self.transform
+            )
 
     def train_dataloader(self):
-        return DataLoader(self.cars_train, batch_size=self.batch_size)
+        return DataLoader(self.train, batch_size=self.batch_size)
 
     def val_dataloader(self):
-        return DataLoader(self.cars_val, batch_size=self.batch_size)
+        return DataLoader(self.val, batch_size=self.batch_size)
 
     def test_dataloader(self):
-        return DataLoader(self.cars_test, batch_size=self.batch_size)
+        return DataLoader(self.test, batch_size=self.batch_size)
 
     def predict_dataloader(self):
-        return DataLoader(self.cars_predict, batch_size=self.batch_size)
+        return self.test_dataloader()

@@ -1,4 +1,7 @@
-.whl
-.egg
+*.whl
+*.egg
 .DS_Store
 .venv
+*.egg-info
+__pycache__
+.pytest_cache
