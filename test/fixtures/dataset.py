@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 import torch
 
-
 class DummyDataset(Dataset):
     """Dummy dataset."""
 
