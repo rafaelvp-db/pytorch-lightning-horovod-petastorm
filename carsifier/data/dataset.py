@@ -4,13 +4,10 @@ import numpy as np
 
 class Cars(StanfordCars):
     def __init__(
-        root = "/tmp",
-        split = "train",
-        transform = None,
-        target_transform = None,
-        download = True
+        self,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
 
     def __getitem__(self, idx):
 
