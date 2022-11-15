@@ -1,7 +1,7 @@
 # https://colab.research.google.com/drive/1smfCw-quyKwxlj69bbsqpZhD75CnBuRh?usp=sharing#scrollTo=yaF_kykKUFpk
 
 import pytorch_lightning as pl
-from torchvision.datasets import StanfordCars
+from carsifier.data.dataset import Cars
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
 
@@ -41,7 +41,7 @@ class CarsDataModule(pl.LightningDataModule):
         
         if stage == "fit":
             # build dataset
-            dataset = StanfordCars(
+            dataset = Cars(
                 root=self.data_dir,
                 split="train",
                 download=self.download,
@@ -51,7 +51,7 @@ class CarsDataModule(pl.LightningDataModule):
             self.train, self.val = random_split(dataset, [6500, 1644])
 
         if stage == "test":
-            self.test = StanfordCars(
+            self.test = Cars(
                 root=self.data_dir,
                 split="test",
                 download=self.download,
