@@ -1,6 +1,6 @@
 torch==1.13.0
 pytorch_lightning==1.6.5
-torchvision
+torchvision==0.14.0
 torchmetrics
 pyspark==3.2.1
 numpy
