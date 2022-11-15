@@ -9,11 +9,13 @@ class CarsDataModule(pl.LightningDataModule):
     def __init__(
         self,
         data_dir: str = "/tmp",
-        batch_size: int = 32
+        batch_size: int = 32,
+        download: bool = True
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.download = download
 
         # Augmentation policy for training set
         self.augmentation = transforms.Compose([
@@ -42,7 +44,7 @@ class CarsDataModule(pl.LightningDataModule):
             dataset = StanfordCars(
                 root=self.data_dir,
                 split="train",
-                download=True,
+                download=self.download,
                 transform=self.augmentation
             )
             # split dataset
@@ -52,7 +54,7 @@ class CarsDataModule(pl.LightningDataModule):
             self.test = StanfordCars(
                 root=self.data_dir,
                 split="test",
-                download=True,
+                download=self.download,
                 transform=self.transform
             )
 

@@ -1,14 +1,13 @@
 from carsifier.petastorm.dataset import generate_dataset
-from fixtures.fixtures import spark
-from carsifier.data.data import CarsDataModule
+from fixtures.spark import spark
+from fixtures.dataset import DummyDataset
 
 
 def test_petastorm(spark):
 
-    data_module = CarsDataModule()
-    dataset = data_module.train_dataloader().dataset
+    dataset = DummyDataset()
     generate_dataset(
-        output_url = '/tmp',
+        output_url = 'file:///tmp/test.parquet',
         dataset = dataset,
         spark = spark
     )
