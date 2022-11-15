@@ -5,9 +5,13 @@ from fixtures.dataset import DummyDataset
 
 def test_petastorm(spark):
 
-    dataset = DummyDataset()
+    size = 100
+    dataset = DummyDataset(size = size)
+    path = 'file:///tmp/test.parquet'
     generate_dataset(
-        output_url = 'file:///tmp/test.parquet',
+        output_url = path,
         dataset = dataset,
         spark = spark
     )
+    df = spark.read.parquet(path)
+    assert df.count() == size
