@@ -10,13 +10,7 @@ class Cars(StanfordCars):
         target_transform = None,
         download = True
     ):
-        super().__init__(
-            root,
-            split,
-            transform,
-            target_transform,
-            download
-        )
+        super().__init__()
 
     def __getitem__(self, idx):
 
