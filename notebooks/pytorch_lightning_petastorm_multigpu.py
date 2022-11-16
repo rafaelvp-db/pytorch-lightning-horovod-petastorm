@@ -27,10 +27,6 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install pytorch-lightning
-
-# COMMAND ----------
-
 import io
 import numpy as np
 from functools import partial
@@ -349,7 +345,8 @@ def train(train_converter=train_sample_converter, val_converter=val_sample_conve
   # We could use `on_train_batch_start` to control epoch sizes as shown in the link below but it's cleaner when done here with `limit_train_batches` parameter
   # https://pytorch-lightning.readthedocs.io/en/stable/_modules/pytorch_lightning/core/hooks.html#ModelHooks.on_train_batch_start
   trainer = pl.Trainer(
-      gpus=gpus,
+      accelerator = "gpu",
+      devices=gpus,
       max_epochs=MAX_EPOCH_COUNT,
       limit_train_batches=STEPS_PER_EPOCH,  # this is the way to end the epoch, otherwise they will continue forever because the Train dataloader is producing infinite number of batches
       log_every_n_steps=1,
@@ -374,93 +371,11 @@ def train(train_converter=train_sample_converter, val_converter=val_sample_conve
 
 # MAGIC %md
 # MAGIC 
-# MAGIC ### CPU Training
+# MAGIC ## Option 1: Use Horovod
+# MAGIC 
+# MAGIC ***Note:** This section will require a cluster with multiple GPUs, a single node cluster with multiple GPUs instace will be sufficient (e.g. p3.8xlarge on AWS or equivalent on other cloud providers)*
 
 # COMMAND ----------
-
-cpu_model = train(gpus=0)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC #### CPU Training Results
-# MAGIC 
-# MAGIC Train on CPU:
-# MAGIC  - max epoch count: 15
-# MAGIC  - batch size: 64
-# MAGIC  - steps per epoch: 15
-# MAGIC  - sample size: 1000
-# MAGIC  - start time: 2022-11-16 08:10:41
-# MAGIC 
-# MAGIC ======================
-# MAGIC 
-# MAGIC Epoch: 9
-# MAGIC Monitored metric val_loss did not improve in the last 3 records. Best score: 0.402. Signaling Trainer to stop.
-# MAGIC 
-# MAGIC -- Training completed in ***3 minutes 58 seconds*** at 2022-11-16 07:18:38
-# MAGIC   
-# MAGIC ----------------------
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC ## GPU Training
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC #### Using 1 GPU
-# MAGIC 
-# MAGIC ***Note:** This section will require a cluster with a GPU. A single node cluster with a single GPU instance will suffice (e.g. `p3.2xlarge` on AWS or equivalent on other cloud providers)*
-
-# COMMAND ----------
-
-gpu_model = train(gpus=1)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC #### GPU Training Results
-# MAGIC 
-# MAGIC Train on 1 GPU:
-# MAGIC  - max epoch count: 15
-# MAGIC  - batch size: 64
-# MAGIC  - steps per epoch: 15
-# MAGIC  - sample size: 1000
-# MAGIC  - start time: 2022-11-16 08:23:11
-# MAGIC 
-# MAGIC ======================
-# MAGIC 
-# MAGIC Epoch: 11
-# MAGIC Monitored metric val_loss did not improve in the last 3 records. Best score: ***0.386***. Signaling Trainer to stop.
-# MAGIC 
-# MAGIC -- Training completed in ***2 minutes 49 seconds*** at 2022-11-16 07:27:52
-# MAGIC 
-# MAGIC ---------------------
-# MAGIC 
-# MAGIC ***Observations:** full training/validation cycle on GPU is faster than CPU (some runs showed up 2 times speedup), whereas similar training runs without the validation steps showed more that 3 times speedup on GPU*
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC ## Option 2: Use `sparkdl.HorovodRunner`
-# MAGIC 
-# MAGIC ***Note:** This section will require a multi-node GPU cluster, a cluster with 2 workers, each with a single GPU will be sufficient (e.g. p3.2xlarge on AWS or equivalent on other cloud providers)*
-# MAGIC 
-# MAGIC Here we are jumping straight into the multi-node distributed training
-
-# COMMAND ----------
-
-from sparkdl import HorovodRunner
-
-# COMMAND ----------
-
-# This code is failing when executed in a notebook in the Repos, run it in your own workspace if so (File->Clone)
 
 from pytorch_lightning.utilities import _HOROVOD_AVAILABLE
 if _HOROVOD_AVAILABLE:
@@ -470,37 +385,39 @@ if _HOROVOD_AVAILABLE:
   from pytorch_lightning.plugins.training_type.horovod import HorovodPlugin
   print(f"Horovod: {horovod.__version__}")
 
+
+# COMMAND ----------
+
 def train_hvd():
   hvd.init()
-  return train(gpus=1, strategy="horovod", device_id=hvd.rank(), device_count=hvd.size()) 
+  return train(gpus=4, strategy="horovod", device_id=hvd.rank(), device_count=hvd.size())
 
-
-hr = HorovodRunner(np=4, driver_log_verbosity='all')
-spark_hvd_model = hr.run(train_hvd)
+# Single node, 4 GPUs
+hvd_model = horovod.run(train_hvd, np=1)
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC 
-# MAGIC #### 2 GPUs on 2 Nodes Training Results
+# MAGIC #### 4 GPUs on Single Node Training Results
 # MAGIC 
-# MAGIC Train on 2 GPUs:
-# MAGIC  - max epoch count: 15
-# MAGIC  - batch size: 128
-# MAGIC  - steps per epoch: 15
-# MAGIC  - sample size: 1000
-# MAGIC  - start time: 2022-01-09 17:22:16
+# MAGIC Train on 4 GPUs:
+# MAGIC - max epoch count: 15
+# MAGIC - batch size: 64
+# MAGIC - steps per epoch: 15
+# MAGIC - sample size: 1000
+# MAGIC - start time: 2022-11-16 07:56:31
 # MAGIC 
 # MAGIC ======================
 # MAGIC 
-# MAGIC Epoch 8: 100% 16/16 [00:19<00:00,  1.20s/it, loss=0.332, v_num=0, train_loss=0.310, ***val_loss=0.356***, val_acc=0.910][1,0]
+# MAGIC Epoch 14: 100% 16/16 [00:06<00:00,  2.38it/s, loss=0.415, v_num=0, train_loss=0.509, val_loss=0.474, val_acc=0.875][1,0]
 # MAGIC 
-# MAGIC -- Training completed in ***3 minutes 45 seconds*** at 2022-01-09 17:26:02
+# MAGIC -- Training completed in ***2 minutes 49 seconds*** at 2022-11-16 07:59:21
 # MAGIC 
-# MAGIC ---------------------
 # MAGIC 
 # MAGIC ***Observations:*** 
-# MAGIC   - training time and resulting loss are similar to training with 2 GPUs on the same node, but this time it was accross 2 nodes
+# MAGIC   - we get a better training time than single GPU training, however loss is decreasing slower
+# MAGIC   - we are getting a better progress bar reporting in this training, must be Horovod's doing
 
 # COMMAND ----------
 
